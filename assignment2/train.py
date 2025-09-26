@@ -14,26 +14,42 @@ from model import DecisionTree, MajorityBaseline, Model
 def train(model: Model, x: pd.DataFrame, y: list):
     '''
     Learn a model from training data.
+
+    Just trains the model by calling the class's train method; returns nothing, because the class train method returns nothing.
     '''
-    # YOUR CODE HERE
-    pass
+    model.train(x, y)
 
 
 def evaluate(model: Model, x: pd.DataFrame, y: list) -> float:
     '''
     Evaluate a trained model against a dataset.
+
+    Assumes the model has already been trained. Pass in train or test data, either works, and the correct labels for the data you pass in. Returns the accuracy of the model on the provided data.
     '''
-    # YOUR CODE HERE
-    pass
+    preds = model.predict(x)
+    return calculate_accuracy(y, preds)
 
 
 def calculate_accuracy(labels: list, predictions: list) -> float:
     '''
     Calculate the accuracy between ground-truth labels and candidate predictions.
-    '''
-    # YOUR CODE HERE
-    pass
 
+    Pass in two lists of the same length, one predicted labels and one true labels; returns the accuracy of the predictions.
+    '''
+    print(labels)
+    print(predictions)
+    if labels is None or predictions is None:
+        raise ValueError("Both labels and predictions must not be None.")
+    
+    if not labels or not predictions:
+        raise ValueError("Labels and predictions must not be empty.")
+    
+    if len(labels) != len(predictions):
+        raise ValueError("The length of labels and predictions must be the same.")
+    
+    correct_predictions = sum(1 for lab, pred in zip(labels, predictions) if lab == pred)
+    accuracy = correct_predictions / len(labels)
+    return accuracy
 
 
 if __name__ == '__main__':

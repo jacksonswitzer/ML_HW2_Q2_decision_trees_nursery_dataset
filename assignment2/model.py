@@ -4,8 +4,8 @@
 
 from math import log2
 from typing import Protocol
-
 import pandas as pd
+from collections import Counter
 
 
 # DON'T CHANGE THE CLASS BELOW! 
@@ -21,8 +21,7 @@ class Model(Protocol):
 
 class MajorityBaseline(Model):
     def __init__(self):
-        # YOUR CODE HERE
-        pass
+        self.majority_label = None
 
 
     def train(self, x: pd.DataFrame, y: list):
@@ -36,10 +35,16 @@ class MajorityBaseline(Model):
         Note:
             - If you prefer not to use pandas, you can convert a dataframe `df` to a 
               list of dictionaries with `df.to_dict(orient='records')`.
-        '''
 
-        # YOUR CODE HERE
-        pass
+        Sets self.majority_label to the most common label in y, returns nothing.
+        '''
+        if len(x) == 0:
+            raise ValueError("There is no training data")
+        if len(y) == 0:
+            raise ValueError("There are no labels")
+        if len(y) != len(x.index):
+            raise ValueError("There should be the same number of training examples are there are labels (right now there is not)")
+        self.majority_label = Counter(y).most_common()[0][0]
     
 
     def predict(self, x: pd.DataFrame) -> list:
@@ -51,11 +56,13 @@ class MajorityBaseline(Model):
 
         Returns:
             list: A list with the predicted labels, each corresponding to a row in `x`.
+
+        Returns a list of the majority label repeated for each row in x (so pass in the test set to this and get your predictions).
         '''
-
-        # YOUR CODE HERE
-        pass
-
+        if self.majority_label is None:
+            raise ValueError("The model hasn't been trained yet")
+        return [self.majority_label]*len(x.index)
+        
 
 class DecisionTree(Model):
     def __init__(self, depth_limit: int = None, ig_criterion: str = 'entropy'):
@@ -70,6 +77,66 @@ class DecisionTree(Model):
         self.depth_limit = depth_limit
         self.ig_criterion = ig_criterion
         self.root = None
+
+    
+    def entropy(self, y: list) -> float:
+        if len(y) == 0:
+            return 0.0
+        else:
+            num_elements = len(y)
+            counts_dict = Counter(y)
+            probs = []
+            for label in counts_dict:
+                probs.append(counts_dict[label] / num_elements)
+            entropy = sum(-prob * log2(prob) for prob in probs)
+            return entropy
+        
+
+    def information_gain(self, ig_criterion: str, split_attribute, x: pd.DataFrame, y: pd.Series) -> float:
+        x = x.reset_index(drop = True)
+        if split_attribute not in x.columns:
+            raise ValueError("split_attribute should be a feature")
+        values_of_attribute = x[split_attribute].unique()
+        weighted_average_ig_criterion_values = []
+        current_ig_criterion_value = self.entropy(y.tolist())
+        for value in values_of_attribute:
+            x_subset = x[x[split_attribute] == value].reset_index(drop = True)
+            y_subset = y.iloc[x_subset.index]
+            if ig_criterion == 'entropy':
+                weighted_average_ig_criterion_values.append((len(y_subset) / len(y)) * self.entropy(y_subset.tolist()))
+        return current_ig_criterion_value - sum(weighted_average_ig_criterion_values)
+    
+
+    def build_tree(self, x: pd.DataFrame, y: pd.Series, current_depth: int):
+        #If all labels are the same
+        if all(yy == y.iloc[0] for yy in y):
+            return {"feature": None, "children": {}, "label": y.iloc[0]}
+        
+        #If we're out of features or we got to the depth limit
+        if len(x.columns) == 0 or (self.depth_limit is not None and current_depth >= self.depth_limit):
+            majority_label = Counter(y).most_common()[0][0]
+            return {"feature": None, "children": {}, "label": majority_label}
+        
+        #Otherwise find the best feature to split on
+        ig_per_feature = {}
+        for feature in x.columns:
+            ig_per_feature[feature] = self.information_gain(self.ig_criterion, feature, x, y)
+        
+        best_feature = max(ig_per_feature, key=ig_per_feature.get)
+
+        node = {}
+        node['feature'] = best_feature
+        node['children'] = {}
+
+        for value in x[best_feature].unique():
+            x_subset = x[x[best_feature] == value].reset_index(drop = True)
+            y_subset = y.iloc[x_subset.index]
+            if len(y_subset) == 0:
+                majority_label = Counter(y).most_common()[0][0]
+                node['children'][value] = {"feature": None, "children": {}, "label": majority_label}
+            else:
+                node['children'][value] = self.build_tree(x_subset.drop(columns=[best_feature]), y_subset, current_depth + 1)
+        return node
 
 
     def train(self, x: pd.DataFrame, y: list):
@@ -87,10 +154,24 @@ class DecisionTree(Model):
             - Use the variable self.ig_criterion to decide whether to calulate information gain 
               with entropy or collision entropy
         '''
+        
+        if len(x) == 0:
+            raise ValueError("There is no training data")
+        if len(y) == 0:
+            raise ValueError("There are no labels")
+        if len(y) != len(x.index):
+            raise ValueError("There should be the same number of training examples are there are labels (right now there is not)")
+        if self.ig_criterion not in ['entropy', 'collision']:
+            raise ValueError("ig_criterion should be 'entropy' or 'collision'")
+        if self.depth_limit is not None and self.depth_limit <= 0:
+            raise ValueError("depth_limit should be a positive integer or None")
+        
+        y_series = pd.Series(y).reset_index(drop = True)
+        x = x.reset_index(drop = True)
 
-        # YOUR CODE HERE
-        pass
-    
+        self.root = self.build_tree(x, y_series, 0)
+        print('finished building tree')
+
 
     def predict(self, x: pd.DataFrame) -> list:
         '''
@@ -102,6 +183,4 @@ class DecisionTree(Model):
         Returns:
             list: A list with the predicted labels, each corresponding to a row in `x`.
         '''
-
-        # YOUR CODE HERE
-        pass
+        #YOUR CODE HERE
