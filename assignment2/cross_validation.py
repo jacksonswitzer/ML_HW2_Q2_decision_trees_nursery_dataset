@@ -24,6 +24,12 @@ def cross_validation(cv_folds: List[pd.DataFrame], depth_limit_values: List[int]
     Returns:
         int: the best depth_limit hyperparameter discovered
         float: the average cross-validation accuracy corresponding to the best depth_limit
+
+    My notes:
+        depth_limit_values is this: list(range(1, 13)). That's the same as [1,2,3,4,5,6,7,8,9,10,11,12].
+        cv_folds is a list of five DataFrames
+        ig_criterion is the string 'entropy' or 'collision'
+
     '''
     best_depth = -1
     best_avg_accuracy = 0.0
@@ -33,7 +39,34 @@ def cross_validation(cv_folds: List[pd.DataFrame], depth_limit_values: List[int]
     # For each depth in depth_limit_values, you should find the average accuracy
     # across the k folds and keep track of the best depth.
 
+    avg_accuracy_by_depth_limit = {}
+    for depth_limit in depth_limit_values:
+        accuracy_each_fold = []
+        for index, fold in enumerate(cv_folds):
+            current_depth_limit = depth_limit
+            current_fold = fold
+            other_folds_list = [foldd for i, foldd in enumerate(cv_folds) if i != index]
+            other_folds = pd.concat(other_folds_list)
 
+            train_x = other_folds.drop(other_folds.columns[-1], axis=1)
+            train_y = other_folds[other_folds.columns[-1]].tolist()
+            
+            test_x = current_fold.drop(current_fold.columns[-1], axis=1)
+            test_y = current_fold[current_fold.columns[-1]].tolist()
+
+            current_model = DecisionTree(depth_limit=current_depth_limit, ig_criterion=ig_criterion)
+
+            train(model=current_model, x=train_x, y=train_y)
+            accu = evaluate(current_model, test_x, test_y)
+            accuracy_each_fold.append(accu)
+        avg_accuracy_at_this_depth_limit = sum(accuracy_each_fold) / len(accuracy_each_fold)
+        avg_accuracy_by_depth_limit[depth_limit] = avg_accuracy_at_this_depth_limit
+    print('Average accuracy for each depth limit:')
+    print(avg_accuracy_by_depth_limit)
+
+    best_depth = max(avg_accuracy_by_depth_limit, key=avg_accuracy_by_depth_limit.get)
+    best_avg_accuracy = max(avg_accuracy_by_depth_limit.values())
+    
     return best_depth, best_avg_accuracy
 
 

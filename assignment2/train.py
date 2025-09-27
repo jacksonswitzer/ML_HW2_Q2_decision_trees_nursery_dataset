@@ -11,7 +11,6 @@ from data import load_data
 from model import DecisionTree, MajorityBaseline, Model
 
 
-
 def train(model: Model, x: pd.DataFrame, y: list):
     '''
     Learn a model from training data.
@@ -19,16 +18,6 @@ def train(model: Model, x: pd.DataFrame, y: list):
     Just trains the model by calling the class's train method; returns nothing, because the class train method returns nothing.
     '''
     model.train(x, y)
-
-
-def evaluate(model: Model, x: pd.DataFrame, y: list) -> float:
-    '''
-    Evaluate a trained model against a dataset.
-
-    Assumes the model has already been trained. Pass in train or test data, either works, and the correct labels for the data you pass in. Returns the accuracy of the model on the provided data.
-    '''
-    preds = model.predict(x)
-    return calculate_accuracy(y, preds)
 
 
 def calculate_accuracy(labels: list, predictions: list) -> float:
@@ -51,6 +40,16 @@ def calculate_accuracy(labels: list, predictions: list) -> float:
     return accuracy
 
 
+def evaluate(model: Model, x: pd.DataFrame, y: list) -> float:
+    '''
+    Evaluate a trained model against a dataset.
+
+    Assumes the model has already been trained. Pass in train or test data, either works, and the correct labels for the data you pass in. Returns the accuracy of the model on the provided data.
+    '''
+    preds = model.predict(x)
+    return calculate_accuracy(y, preds)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train and evaluate a model')
     
@@ -66,11 +65,11 @@ if __name__ == '__main__':
 
 
     # load data using the provided paths
-    train_df = pd.read_csv(args.train_path)
+    train_df = pd.read_csv(args.train_path).sample(frac=1).reset_index(drop=True) #from .sample on shuffles the dataframe
     train_x = train_df.drop(train_df.columns[-1], axis=1)
     train_y = train_df[train_df.columns[-1]].tolist()
     
-    test_df = pd.read_csv(args.eval_path)
+    test_df = pd.read_csv(args.eval_path).sample(frac=1).reset_index(drop=True) #from .sample on shuffles the dataframe
     test_x = test_df.drop(test_df.columns[-1], axis=1)
     test_y = test_df[test_df.columns[-1]].tolist()
 

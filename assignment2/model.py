@@ -109,9 +109,8 @@ class DecisionTree(Model):
     
 
     def go_down_a_level(self, row: pd.Series, node: dict | None = None):
-        #for the first round
         if node is None:
-            node = self.root
+            node = self.root #this gets set by build_tree()
         
         #for when you get to the bottom
         if node.get('feature') is None:
@@ -149,10 +148,11 @@ class DecisionTree(Model):
         if y.nunique() == 1:
             return {"feature": None, "children": {}, "label": y.iloc[0]}
         
-        #If we're out of features or we got to the depth limit
-        if len(x.columns) == 0 or (self.depth_limit is not None and current_depth >= self.depth_limit):
-            majority_label = Counter(y).most_common()[0][0]
-            return {"feature": None, "children": {}, "label": majority_label}
+        #If we got to the depth limit
+        if (self.depth_limit is not None and current_depth >= self.depth_limit):
+            label_counts = Counter(y)
+            most_common_label = label_counts.most_common()[0][0] #this allows errors but the output isn't deterministic
+            return {"feature": None, "children": {}, "label": most_common_label}
         
         #Otherwise find the best feature to split on
         ig_per_feature = {}
@@ -167,10 +167,10 @@ class DecisionTree(Model):
 
         for value in x[best_feature].unique():
             x_subset = x[x[best_feature] == value].reset_index(drop = True)
-            y_subset = y.iloc[x_subset.index]
+            y_subset = y[x[best_feature] == value].reset_index(drop = True)
             if len(y_subset) == 0:
-                majority_label = Counter(y).most_common()[0][0]
-                node['children'][value] = {"feature": None, "children": {}, "label": majority_label}
+                most_common_label = Counter(y).most_common()[0][0]
+                node['children'][value] = {"feature": None, "children": {}, "label": most_common_label}
             else:
                 node['children'][value] = self.build_tree(x_subset.drop(columns=[best_feature]), y_subset, current_depth + 1)
         return node
