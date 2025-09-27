@@ -44,9 +44,9 @@ def cross_validation(cv_folds: List[pd.DataFrame], depth_limit_values: List[int]
         accuracy_each_fold = []
         for index, fold in enumerate(cv_folds):
             current_depth_limit = depth_limit
-            current_fold = fold
+            current_fold = fold.sample(frac=1)
             other_folds_list = [foldd for i, foldd in enumerate(cv_folds) if i != index]
-            other_folds = pd.concat(other_folds_list)
+            other_folds = pd.concat(other_folds_list).sample(frac=1).reset_index(drop=True) #from .sample on shuffles the dataframe
 
             train_x = other_folds.drop(other_folds.columns[-1], axis=1)
             train_y = other_folds[other_folds.columns[-1]].tolist()
