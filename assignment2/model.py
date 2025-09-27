@@ -61,7 +61,8 @@ class MajorityBaseline(Model):
         '''
         if self.majority_label is None:
             raise ValueError("The model hasn't been trained yet")
-        return [self.majority_label]*len(x.index)
+        majorities = [self.majority_label]*len(x.index)
+        return majorities
         
 
 class DecisionTree(Model):
@@ -107,9 +108,45 @@ class DecisionTree(Model):
         return current_ig_criterion_value - sum(weighted_average_ig_criterion_values)
     
 
+    def go_down_a_level(self, row: pd.Series, node: dict | None = None):
+        #for the first round
+        if node is None:
+            node = self.root
+        
+        #for when you get to the bottom
+        if node.get('feature') is None:
+            return node.get('label')
+        
+        #for when you're in the middle
+        feature_splitting_on = node.get('feature')
+        if type(feature_splitting_on) == str:
+            feature_value = row.loc[feature_splitting_on]
+        elif type(feature_splitting_on) == int:
+            feature_value = row.iloc[feature_splitting_on]
+        else:#shouldn't happen
+            raise ValueError("feature_split should be a string or an integer")
+        
+        #if the feature value is in the child dictionary, go down that branch
+        #if the feature value isn't in the child dictionary, return majority label of current node
+        if feature_value in node.get('children'):
+            child_node = node.get('children').get(feature_value)
+            return self.go_down_a_level(row, child_node)
+        else:
+            monte_cristo = Counter()
+            count_dracula = [node]
+            while count_dracula:
+                current_node = count_dracula.pop()
+                if current_node.get('feature') is None:
+                    monte_cristo[current_node.get('label')] += 1
+                else:
+                    for child in current_node.get('children').values():
+                        count_dracula.append(child)
+            return monte_cristo.most_common()[0][0]        
+    
+
     def build_tree(self, x: pd.DataFrame, y: pd.Series, current_depth: int):
         #If all labels are the same
-        if all(yy == y.iloc[0] for yy in y):
+        if y.nunique() == 1:
             return {"feature": None, "children": {}, "label": y.iloc[0]}
         
         #If we're out of features or we got to the depth limit
@@ -122,7 +159,7 @@ class DecisionTree(Model):
         for feature in x.columns:
             ig_per_feature[feature] = self.information_gain(self.ig_criterion, feature, x, y)
         
-        best_feature = max(ig_per_feature, key=ig_per_feature.get)
+        best_feature = max(ig_per_feature, key=lambda feature: ig_per_feature[feature])
 
         node = {}
         node['feature'] = best_feature
@@ -170,7 +207,6 @@ class DecisionTree(Model):
         x = x.reset_index(drop = True)
 
         self.root = self.build_tree(x, y_series, 0)
-        print('finished building tree')
 
 
     def predict(self, x: pd.DataFrame) -> list:
@@ -183,4 +219,7 @@ class DecisionTree(Model):
         Returns:
             list: A list with the predicted labels, each corresponding to a row in `x`.
         '''
-        #YOUR CODE HERE
+        predictions = []
+        for _, row in x.iterrows():
+            predictions.append(self.go_down_a_level(row))
+        return predictions

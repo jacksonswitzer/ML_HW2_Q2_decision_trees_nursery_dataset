@@ -5,6 +5,7 @@
 import argparse
 import numpy as np
 import pandas as pd
+import statistics
 
 from data import load_data
 from model import DecisionTree, MajorityBaseline, Model
@@ -36,14 +37,12 @@ def calculate_accuracy(labels: list, predictions: list) -> float:
 
     Pass in two lists of the same length, one predicted labels and one true labels; returns the accuracy of the predictions.
     '''
-    print(labels)
-    print(predictions)
-    if labels is None or predictions is None:
-        raise ValueError("Both labels and predictions must not be None.")
-    
+    if labels is None:
+        raise ValueError("Labels cannot be None.")
+    if predictions is None:
+        raise ValueError("Predictions cannot be None.")
     if not labels or not predictions:
         raise ValueError("Labels and predictions must not be empty.")
-    
     if len(labels) != len(predictions):
         raise ValueError("The length of labels and predictions must be the same.")
     
@@ -70,7 +69,7 @@ if __name__ == '__main__':
     train_df = pd.read_csv(args.train_path)
     train_x = train_df.drop(train_df.columns[-1], axis=1)
     train_y = train_df[train_df.columns[-1]].tolist()
-
+    
     test_df = pd.read_csv(args.eval_path)
     test_x = test_df.drop(test_df.columns[-1], axis=1)
     test_y = test_df[test_df.columns[-1]].tolist()
