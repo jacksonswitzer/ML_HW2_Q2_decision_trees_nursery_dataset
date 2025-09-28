@@ -34,11 +34,6 @@ def cross_validation(cv_folds: List[pd.DataFrame], depth_limit_values: List[int]
     best_depth = -1
     best_avg_accuracy = 0.0
 
-    # YOUR CODE HERE
-    # Implement the k-fold cross-validation logic.
-    # For each depth in depth_limit_values, you should find the average accuracy
-    # across the k folds and keep track of the best depth.
-
     avg_accuracy_by_depth_limit = {}
     for depth_limit in depth_limit_values:
         accuracy_each_fold = []

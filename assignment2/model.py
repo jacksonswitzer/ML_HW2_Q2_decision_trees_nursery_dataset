@@ -93,18 +93,33 @@ class DecisionTree(Model):
             return entropy
         
 
+    def collision(self, y: list) -> float:
+        if len(y) == 0:
+            return 0.0
+        else:
+            num_elements = len(y)
+            counts_dict = Counter(y)
+            probs = []
+            for label in counts_dict:
+                probs.append(counts_dict[label] / num_elements)
+            collision = -log2(sum(prob ** 2 for prob in probs))
+        return collision
+    
+
     def information_gain(self, ig_criterion: str, split_attribute, x: pd.DataFrame, y: pd.Series) -> float:
         x = x.reset_index(drop = True)
         if split_attribute not in x.columns:
             raise ValueError("split_attribute should be a feature")
         values_of_attribute = x[split_attribute].unique()
         weighted_average_ig_criterion_values = []
-        current_ig_criterion_value = self.entropy(y.tolist())
+        current_ig_criterion_value = self.entropy(y.tolist()) if ig_criterion == 'entropy' else self.collision(y.tolist())
         for value in values_of_attribute:
             x_subset = x[x[split_attribute] == value].reset_index(drop = True)
             y_subset = y.iloc[x_subset.index]
             if ig_criterion == 'entropy':
                 weighted_average_ig_criterion_values.append((len(y_subset) / len(y)) * self.entropy(y_subset.tolist()))
+            elif ig_criterion == 'collision':
+                weighted_average_ig_criterion_values.append((len(y_subset) / len(y)) * self.collision(y_subset.tolist()))
         return current_ig_criterion_value - sum(weighted_average_ig_criterion_values)
     
 
